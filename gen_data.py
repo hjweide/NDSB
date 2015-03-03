@@ -50,11 +50,11 @@ def generate_test_data(indir, datafile, namesfile):
 
     print('writing test data to %s' % (datafile))
     with open(datafile, 'wb') as ofile:
-                    np.save(ofile, images_array)
+        np.save(ofile, images_array)
 
     print('writing filenames to %s...' % (namesfile))
     with open(namesfile, 'wb') as ofile:
-                    np.save(ofile, names_array)
+        np.save(ofile, names_array)
 
 
 if __name__ == '__main__':
