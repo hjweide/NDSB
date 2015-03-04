@@ -141,7 +141,10 @@ if __name__ == '__main__':
 
     net_file_names = [
         'net5.pickle',
-        'net7.pickle',
+        #'net6.pickle',
+        #'net7.pickle',
+        #'net8.pickle',
+        'net10.pickle',
     ]
     net_file_list = [join(root, 'nets', nname) for nname in net_file_names]
     for fname in net_file_list:
