@@ -151,9 +151,6 @@ class TransformationBatchIterator(BatchIterator):
         return Xbc, yb
 
 
-"""
-net10 is a convolutional neural network with simple data augmentation and dropout for regularization.  The learning rate and momentum are adjusted throughout.
-"""
 net10 = NeuralNet(
     layers=[
         ('input', layers.InputLayer),
@@ -169,7 +166,6 @@ net10 = NeuralNet(
         ('dropout2', layers.DropoutLayer),
 
         ('conv3', Conv2DLayer),
-        # ('pool3', MaxPool2DLayer),
 
         ('conv4', Conv2DLayer),
         ('pool4', MaxPool2DLayer),
@@ -187,26 +183,33 @@ net10 = NeuralNet(
         ('output', layers.DenseLayer),
     ],
     input_shape=(None, 1, 48, 48),
+
     conv1_num_filters=128, conv1_filter_size=(7, 7), conv1_strides=(1, 1),
     pool1_ds=(2, 2), pool1_strides=(2, 2),
     maxout1_ds=2,
     dropout1_p=0.1,
+
     conv2_num_filters=256, conv2_filter_size=(6, 6), conv2_strides=(1, 1),
     pool2_ds=(2, 2), pool2_strides=(2, 2),
     maxout2_ds=2,
     dropout2_p=0.2,
+
     conv3_num_filters=384, conv3_filter_size=(3, 3), conv3_strides=(1, 1),
-    # pool3_ds=(2, 2), pool3_strides=(2, 2),
+
     conv4_num_filters=512, conv4_filter_size=(3, 3), conv4_strides=(1, 1),
+
     pool4_ds=(2, 2), pool4_strides=(2, 2),
     maxout4_ds=2,
     dropout4_p=0.3,
+
     hidden5_num_units=4096,
     maxout5_ds=2,
     dropout5_p=0.5,
+
     hidden6_num_units=4096,
     maxout6_ds=2,
     dropout6_p=0.5,
+
     output_num_units=121,
     output_nonlinearity=nonlinearities.softmax,
 
@@ -231,12 +234,6 @@ def load(data_file, labels_file=None):
     data = np.load(data_file)
 
     data = 1. - (data.astype(np.float32) / 255.)
-
-    #mean = np.mean(data, axis=0)
-    #data -= mean
-
-    #std = np.std(data, axis=0)
-    #data /= std
 
     if labels_file is not None:
         labels = np.load(labels_file)

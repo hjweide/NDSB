@@ -1,6 +1,6 @@
 #!/home/hendrik/work/ndsb/bin/python
 
-# file net7.py
+# file net19.py
 
 from __future__ import absolute_import
 
@@ -20,7 +20,6 @@ from sklearn.cross_validation import StratifiedKFold  # NOQA
 from lasagne import layers
 from lasagne.layers import cuda_convnet
 from lasagne import nonlinearities
-from lasagne.updates import rmsprop
 from nolearn.lasagne import NeuralNet
 from nolearn.lasagne import BatchIterator
 
@@ -108,8 +107,8 @@ class EarlyStopping(object):
             raise StopIteration()
 
 
-max_offset = 6
-min_scale, max_scale = 0.7, 1.3
+max_offset = 2
+min_scale, max_scale = 1. / 1.1, 1.1
 
 
 class TransformationBatchIterator(BatchIterator):
@@ -152,49 +151,67 @@ class TransformationBatchIterator(BatchIterator):
         return Xbc, yb
 
 
-"""
-net7 is a convolutional neural network with simple data augmentation and dropout for regularization.  The learning rate and momentum are adjusted throughout.
-"""
-net7 = NeuralNet(
+net19 = NeuralNet(
     layers=[
         ('input', layers.InputLayer),
+
         ('conv1', Conv2DLayer),
         ('pool1', MaxPool2DLayer),
+        ('maxout1', layers.FeaturePoolLayer),
         ('dropout1', layers.DropoutLayer),
+
         ('conv2', Conv2DLayer),
         ('pool2', MaxPool2DLayer),
+        ('maxout2', layers.FeaturePoolLayer),
         ('dropout2', layers.DropoutLayer),
+
         ('conv3', Conv2DLayer),
         ('pool3', MaxPool2DLayer),
+        ('maxout3', layers.FeaturePoolLayer),
         ('dropout3', layers.DropoutLayer),
-        ('hidden4', layers.DenseLayer),
-        ('dropout4', layers.DropoutLayer),
+
         ('hidden5', layers.DenseLayer),
+        ('maxout5', layers.FeaturePoolLayer),
         ('dropout5', layers.DropoutLayer),
+
+        ('hidden6', layers.DenseLayer),
+        ('maxout6', layers.FeaturePoolLayer),
+        ('dropout6', layers.DropoutLayer),
+
         ('output', layers.DenseLayer),
     ],
     input_shape=(None, 1, 48, 48),
-    conv1_num_filters=32, conv1_filter_size=(4, 4), conv1_strides=(1, 1),
+
+    conv1_num_filters=64, conv1_filter_size=(5, 5), conv1_strides=(1, 1),
     pool1_ds=(2, 2), pool1_strides=(2, 2),
-    dropout1_p=0.2,
-    conv2_num_filters=64, conv2_filter_size=(3, 3), conv2_strides=(1, 1),
+    maxout1_ds=2,
+    dropout1_p=0.1,
+
+    conv2_num_filters=128, conv2_filter_size=(4, 4), conv2_strides=(1, 1),
     pool2_ds=(2, 2), pool2_strides=(2, 2),
+    maxout2_ds=2,
     dropout2_p=0.2,
-    conv3_num_filters=128, conv3_filter_size=(3, 3), conv3_strides=(1, 1),
+
+    conv3_num_filters=256, conv3_filter_size=(3, 3), conv3_strides=(1, 1),
     pool3_ds=(2, 2), pool3_strides=(2, 2),
-    dropout3_p=0.2,
-    hidden4_num_units=2048,
-    dropout4_p=0.5,
-    hidden5_num_units=2048,
+    maxout3_ds=2,
+    dropout3_p=0.3,
+
+    hidden5_num_units=4096,
+    maxout5_ds=2,
     dropout5_p=0.5,
+
+    hidden6_num_units=4096,
+    maxout6_ds=2,
+    dropout6_p=0.5,
+
     output_num_units=121,
     output_nonlinearity=nonlinearities.softmax,
 
-    update_learning_rate=theano.shared(float32(0.001)),
-    #update_momentum=theano.shared(float32(0.9)),
-    update=rmsprop,
+    update_learning_rate=theano.shared(float32(0.03)),
+    update_momentum=theano.shared(float32(0.9)),
     on_epoch_finished=[
-        #AdjustVariableOnStagnation('update_learning_rate', patience=25, update=lambda x: 0.5 * x),
+        AdjustVariableOnStagnation('update_learning_rate', patience=25, update=lambda x: 0.5 * x),
         #AdjustVariableOnStagnation('update_momentum', patience=25, update=lambda x: (1 - x) * 0.9 + x),
         #AdjustVariable('update_learning_rate', start=0.03, stop=0.001),
         #AdjustVariable('update_momentum', start=0.9, stop=0.999),
@@ -211,12 +228,6 @@ def load(data_file, labels_file=None):
     data = np.load(data_file)
 
     data = 1. - (data.astype(np.float32) / 255.)
-
-    #mean = np.mean(data, axis=0)
-    #data -= mean
-
-    #std = np.std(data, axis=0)
-    #data /= std
 
     if labels_file is not None:
         labels = np.load(labels_file)
@@ -323,12 +334,12 @@ if __name__ == '__main__':
     train_labels_file = join(root, 'train_labels_noaspect.npy')
     test_data_file = join(root, 'test_data_noaspect.npy')
     test_names_file = join(root, 'test_names_noaspect.npy')
-    trained_net_file = join(root, 'nets', 'net7.pickle')
-    submission_file = join(root, 'submissions', 'submit_valid_aug.csv')
+    trained_net_file = join(root, 'nets', 'net19.pickle')
+    submission_file = join(root, 'submissions', 'submit_11.csv')
 
     retrain, test = False, False
     if len(sys.argv) < 2:
-        print('usage:\n ./net7.py test\n ./net7.py retrain')
+        print('usage:\n ./net19.py test\n ./net19.py retrain')
     elif sys.argv[1].lower() == 'retrain':
         retrain = True
         print('retrain = %s' % (retrain))
@@ -346,15 +357,15 @@ if __name__ == '__main__':
     if retrain:
         print('retraining net...')
         data, labels = load2d(train_data_file, train_labels_file)
-        train_net(data, labels, net7, trained_net_file)
-        plot_loss(net7, outfile=join(root, 'plots', 'net7_loss.png'))
+        train_net(data, labels, net19, trained_net_file)
+        plot_loss(net19, outfile=join(root, 'plots', 'net19_loss.png'))
     else:
         print('loading net from disk...')
         with open(trained_net_file, 'rb') as ifile:
-            net7 = pickle.load(ifile)
+            net19 = pickle.load(ifile)
         print('loading test data...')
         data, _ = load2d(test_data_file)
         names = np.load(test_names_file)
         print('generating kaggle submission...')
 
-        generate_submission(data, names, net7, submission_file, header_file, N=25)
+        generate_submission(data, names, net19, submission_file, header_file, N=50)

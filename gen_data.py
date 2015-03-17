@@ -7,16 +7,33 @@ import numpy as np
 from os import listdir
 from os.path import join
 
+from skimage.morphology import white_tophat, black_tophat, disk     # NOQA
 
-def generate_training_data(allfile, datafile, labelsfile):
+
+coarse_labels = ["acantharia", "amphipods", "appendicularian", "artifacts", "chaetognath", "chordate", "copepod", "crustacean", "ctenophore", "decapods", "detritus", "diatom", "echinoderm", "echinopluteus", "ephyra", "euphausiids", "fecal_pellet", "fish_larvae", "heteropod", "hydromedusae", "invertebrate", "jellies_tentacles", "polychaete", "protist", "pteropod", "radiolarian", "shrimp", "siphonophore", "stomatopod", "tornaria_acorn_worm_larvae", "trichodesmium", "trochophore_larvae", "tunicate", "unknown"]
+
+
+def generate_training_data(allfile, datafile, labelsfile, fine=True):
     images, labels = [], []
     with open(allfile, 'r') as ifile:
         for line in ifile:
             fname, label = line.strip().split(' ')
             img = cv2.imread(fname, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+            # old code to use multiple morphological channels
+            #temp = [img.flatten()]
+            #temp.append(white_tophat(img, disk(1)).flatten())
+            #temp.append(black_tophat(img, disk(1)).flatten())
+            #images.append(np.array(temp).flatten())
             images.append(img.flatten())
-            labels.append(int(label))
+            if fine:
+                labels.append(int(label))
+            else:
+                for i, label in enumerate(coarse_labels):
+                    if label in fname:
+                        labels.append(i)
+                        break
 
+    #images_array = np.array(images)
     images_array = np.vstack(images)
     labels_array = np.vstack(labels)
 
@@ -24,7 +41,7 @@ def generate_training_data(allfile, datafile, labelsfile):
     print('np.shape(labels) = %r' % (np.shape(labels_array),))
 
     # to resize the images back to their 2D-structure:
-    # X = images_array.reshape(-1, 1, 96, 96)
+    # X = images_array.reshape(-1, 1, 48, 48)
 
     print('writing training data to %s...' % (datafile))
     with open(datafile, 'wb') as ofile:
@@ -69,7 +86,8 @@ if __name__ == '__main__':
         datafile = join(root, 'train_data_noaspect.npy')
         labelsfile = join(root, 'train_labels_noaspect.npy')
 
-        generate_training_data(allfile, datafile, labelsfile)
+        generate_training_data(allfile, datafile, labelsfile, fine=True)
+        #generate_training_data(allfile, datafile, labelsfile, fine=False)
     elif arg == 'test':
         print('generating test data')
         indir = join(root, 'test-resized-noaspect')

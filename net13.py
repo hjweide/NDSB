@@ -78,7 +78,8 @@ class AdjustVariableOnStagnation(object):
 
     def __getstate__(self):
         d = dict(self.__dict__)
-        del d['update']
+        if 'update' in d:
+            del d['update']
         return d
 
     def __setstate__(self, d):
@@ -151,12 +152,10 @@ class TransformationBatchIterator(BatchIterator):
         return Xbc, yb
 
 
-"""
-net13 is a convolutional neural network with simple data augmentation and dropout for regularization.  The learning rate and momentum are adjusted throughout.
-"""
 net13 = NeuralNet(
     layers=[
         ('input', layers.InputLayer),
+
         ('conv1', Conv2DLayer),
         ('pool1', MaxPool2DLayer),
         ('maxout1', layers.FeaturePoolLayer),
@@ -230,12 +229,6 @@ def load(data_file, labels_file=None):
     data = np.load(data_file)
 
     data = 1. - (data.astype(np.float32) / 255.)
-
-    #mean = np.mean(data, axis=0)
-    #data -= mean
-
-    #std = np.std(data, axis=0)
-    #data /= std
 
     if labels_file is not None:
         labels = np.load(labels_file)
@@ -343,9 +336,10 @@ if __name__ == '__main__':
     test_data_file = join(root, 'test_data_noaspect.npy')
     test_names_file = join(root, 'test_names_noaspect.npy')
     trained_net_file = join(root, 'nets', 'net13.pickle')
+    finetuned_net_file = join(root, 'nets', 'net13_finetune.pickle')
     submission_file = join(root, 'submissions', 'submit_net_13.csv')
 
-    retrain, test = False, False
+    retrain, test, finetune = False, False, False
     if len(sys.argv) < 2:
         print('usage:\n ./net13.py test\n ./net13.py retrain')
     elif sys.argv[1].lower() == 'retrain':
@@ -359,6 +353,11 @@ if __name__ == '__main__':
         print('test_data_file = %s' % (test_data_file))
         print('test_names_file = %s' % (test_names_file))
         print('header_file = %s' % (header_file))
+    elif sys.argv[1].lower() == 'finetune':
+        finetune = True
+        print('finetune = %s' % (finetune))
+        print('train_data_file = %s' % (train_data_file))
+        print('train_labels_file = %s' % (train_labels_file))
 
     print('trained_net_file = %s' % (trained_net_file))
 
@@ -367,7 +366,7 @@ if __name__ == '__main__':
         data, labels = load2d(train_data_file, train_labels_file)
         train_net(data, labels, net13, trained_net_file)
         plot_loss(net13, outfile=join(root, 'plots', 'net13_loss.png'))
-    else:
+    elif test:
         print('loading net from disk...')
         with open(trained_net_file, 'rb') as ifile:
             net13 = pickle.load(ifile)
@@ -377,3 +376,14 @@ if __name__ == '__main__':
         print('generating kaggle submission...')
 
         generate_submission(data, names, net13, submission_file, header_file, N=50)
+    elif finetune:
+        print('loading pre-trained net from disk...')
+        with open(trained_net_file, 'rb') as ifile:
+            net13 = pickle.load(ifile)
+        print('loading training data...')
+        data, labels = load2d(train_data_file, train_labels_file)
+        net13.batch_iterator_train = BatchIterator(batch_size=128)
+        net13.update_learning_rate = 0.00001
+        net13.max_epochs = 1
+        #net13.on_training_finished = [early_stopping.load_best_weights]
+        train_net(data, labels, net13, finetuned_net_file)

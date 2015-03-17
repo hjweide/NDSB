@@ -12,7 +12,7 @@ import sys
 import subprocess
 
 from os import walk, makedirs, listdir
-from os.path import join, split, exists
+from os.path import join, split, exists, splitext
 
 
 """
@@ -23,13 +23,13 @@ test data structure:
 """
 
 
-def resize_test(indir, outdir, command):
+def resize_test(indir, outdir, command, convert_to_png=False):
     allfiles = listdir(indir)
     for fname in allfiles:
         infile = join(indir, fname)
         outfile = join(outdir, fname)
 
-        resize_image(infile, outfile, command)
+        resize_image(infile, outfile, command, convert_to_png)
 
 
 """
@@ -43,11 +43,12 @@ train_dir
 """
 
 
-def resize_training(indir, outdir, command, allfile, headerfile):
+def resize_training(indir, outdir, command, allfile, headerfile, convert_to_png=False):
     with open(allfile, 'w') as afile, \
             open(headerfile, 'w') as hfile:
         hfile.write('image')
         for label, (root, dirs, files) in enumerate(walk(indir)):
+            dirs.sort()   # it's easier if the classes are sorted alphabetically
             if root == indir:
                 continue
             _, parent = split(root)
@@ -63,10 +64,12 @@ def resize_training(indir, outdir, command, allfile, headerfile):
 
                 afile.write('%s %d\n' % (outfile, label - 1))  # the first directory is the root
 
-                resize_image(infile, outfile, command)
+                resize_image(infile, outfile, command, convert_to_png)
 
 
-def resize_image(infile, outfile, command):
+def resize_image(infile, outfile, command, convert_to_png=False):
+    if convert_to_png:
+        outfile = splitext(outfile)[0] + '.png'
     new_command = command.replace('$name_in', infile)
     new_command = new_command.replace('$name_out', outfile)
 
@@ -79,7 +82,7 @@ def resize_image(infile, outfile, command):
 
 if __name__ == '__main__':
     root = '/home/hendrik/work/ndsb/data'
-    # command = 'convert $name_in -resize 48x48 -gravity center -background white -extent 48x48 $name_out'
+    # command = 'convert $name_in -resize 64x64 -gravity center -background white -extent 64x64 PNG24:$name_out'
     command = 'convert $name_in -resize 48x48! $name_out'  # the ! tells imagemagick to ignore aspect ratio
 
     if len(sys.argv) != 2:
@@ -100,7 +103,7 @@ if __name__ == '__main__':
         print(' the header file will be written to %s' % (headerfile))
         print(' the resizing command is %s' % (command))
 
-        resize_training(indir, outdir, command, allfile, headerfile)
+        resize_training(indir, outdir, command, allfile, headerfile, convert_to_png=True)
     elif arg == 'test':
         indir = join(root, 'test')
         outdir = join(root, 'test-resized-noaspect')

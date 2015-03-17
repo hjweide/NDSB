@@ -1,13 +1,14 @@
 #!/home/hendrik/work/ndsb/bin/python
 
-# file net5.py
+# this is net13.py but trained with fine-tuning for 10 additional epochs
+# file net21.py
 
 from __future__ import absolute_import
 
 import cv2
 import sys
 import time
-import theano
+import theano   # NOQA
 import cPickle as pickle
 
 import numpy as np
@@ -108,7 +109,7 @@ class EarlyStopping(object):
 
 
 max_offset = 6
-min_scale, max_scale = 0.7, 1.3
+min_scale, max_scale = 1. / 1.3, 1.3
 
 
 class TransformationBatchIterator(BatchIterator):
@@ -150,62 +151,75 @@ class TransformationBatchIterator(BatchIterator):
 
         return Xbc, yb
 
-
-"""
-net5 is a convolutional neural network with simple data augmentation and dropout for regularization.  The learning rate and momentum are adjusted throughout.
-"""
-net5 = NeuralNet(
+net21 = NeuralNet(
     layers=[
         ('input', layers.InputLayer),
+
         ('conv1', Conv2DLayer),
         ('pool1', MaxPool2DLayer),
+        ('maxout1', layers.FeaturePoolLayer),
         ('dropout1', layers.DropoutLayer),
+
         ('conv2', Conv2DLayer),
         ('pool2', MaxPool2DLayer),
+        ('maxout2', layers.FeaturePoolLayer),
         ('dropout2', layers.DropoutLayer),
+
         ('conv3', Conv2DLayer),
-        # ('pool3', MaxPool2DLayer),
-        ('conv4', Conv2DLayer),
-        ('pool4', MaxPool2DLayer),
-        ('dropout4', layers.DropoutLayer),
+        ('pool3', MaxPool2DLayer),
+        ('maxout3', layers.FeaturePoolLayer),
+        ('dropout3', layers.DropoutLayer),
+
         ('hidden5', layers.DenseLayer),
+        ('maxout5', layers.FeaturePoolLayer),
         ('dropout5', layers.DropoutLayer),
+
         ('hidden6', layers.DenseLayer),
+        ('maxout6', layers.FeaturePoolLayer),
         ('dropout6', layers.DropoutLayer),
+
         ('output', layers.DenseLayer),
     ],
     input_shape=(None, 1, 48, 48),
-    conv1_num_filters=32, conv1_filter_size=(7, 7), conv1_strides=(1, 1),
+
+    conv1_num_filters=256, conv1_filter_size=(4, 4), conv1_strides=(1, 1),
     pool1_ds=(2, 2), pool1_strides=(2, 2),
+    maxout1_ds=2,
     dropout1_p=0.1,
-    conv2_num_filters=64, conv2_filter_size=(6, 6), conv2_strides=(1, 1),
+
+    conv2_num_filters=384, conv2_filter_size=(3, 3), conv2_strides=(1, 1),
     pool2_ds=(2, 2), pool2_strides=(2, 2),
-    dropout2_p=0.1,
-    conv3_num_filters=128, conv3_filter_size=(3, 3), conv3_strides=(1, 1),
-    # pool3_ds=(2, 2), pool3_strides=(2, 2),
-    conv4_num_filters=256, conv4_filter_size=(3, 3), conv4_strides=(1, 1),
-    pool4_ds=(2, 2), pool4_strides=(2, 2),
-    dropout4_p=0.1,
-    hidden5_num_units=1024,
+    maxout2_ds=2,
+    dropout2_p=0.2,
+
+    conv3_num_filters=512, conv3_filter_size=(3, 3), conv3_strides=(1, 1),
+    pool3_ds=(2, 2), pool3_strides=(2, 2),
+    maxout3_ds=2,
+    dropout3_p=0.3,
+
+    hidden5_num_units=8192,
+    maxout5_ds=2,
     dropout5_p=0.5,
-    hidden6_num_units=1024,
+
+    hidden6_num_units=8192,
+    maxout6_ds=2,
     dropout6_p=0.5,
+
     output_num_units=121,
     output_nonlinearity=nonlinearities.softmax,
 
     update_learning_rate=theano.shared(float32(0.03)),
     update_momentum=theano.shared(float32(0.9)),
-
     on_epoch_finished=[
-        #AdjustVariableOnStagnation('update_learning_rate', patience=25, update=lambda x: 0.5 * x),
+        AdjustVariableOnStagnation('update_learning_rate', patience=25, update=lambda x: 0.5 * x),
         #AdjustVariableOnStagnation('update_momentum', patience=25, update=lambda x: (1 - x) * 0.9 + x),
-        AdjustVariable('update_learning_rate', start=0.03, stop=0.001),
+        #AdjustVariable('update_learning_rate', start=0.03, stop=0.001),
         #AdjustVariable('update_momentum', start=0.9, stop=0.999),
         EarlyStopping(patience=50)
     ],
-    batch_iterator_train=TransformationBatchIterator(batch_size=256),
+    #batch_iterator_train=TransformationBatchIterator(batch_size=128),
 
-    max_epochs=500,
+    max_epochs=250,
     verbose=1,
 )
 
@@ -238,10 +252,15 @@ def load2d(data_file, labels_file=None):
     return data, labels
 
 
-def train_net(X, y, net, netfile=None):
+def train_net(X, y, net, netfile=None, weights_file=None):
     print('np.shape(X) = %r' % (np.shape(X),))
     print('np.shape(y) = %r' % (np.shape(y),))
     print('netfile = %s' % (netfile))
+
+    if weights_file is not None:
+        with open(weights_file, 'rb') as ifile:
+            net_pretrain = np.load(ifile)
+            net.load_weights_from(net_pretrain)
 
     net.fit(X, y)
 
@@ -326,12 +345,13 @@ if __name__ == '__main__':
     train_labels_file = join(root, 'train_labels_noaspect.npy')
     test_data_file = join(root, 'test_data_noaspect.npy')
     test_names_file = join(root, 'test_names_noaspect.npy')
-    trained_net_file = join(root, 'nets', 'net5.pickle')
-    submission_file = join(root, 'submissions', 'submit_valid_aug.csv')
+    trained_net_file = join(root, 'nets', 'net21.pickle')
+    pretrained_net_file = join(root, 'nets', 'net13.pickle')
+    submission_file = join(root, 'submissions', 'submit_11.csv')
 
     retrain, test = False, False
     if len(sys.argv) < 2:
-        print('usage:\n ./net5.py test\n ./net5.py retrain')
+        print('usage:\n ./net21.py test\n ./net21.py retrain')
     elif sys.argv[1].lower() == 'retrain':
         retrain = True
         print('retrain = %s' % (retrain))
@@ -349,15 +369,15 @@ if __name__ == '__main__':
     if retrain:
         print('retraining net...')
         data, labels = load2d(train_data_file, train_labels_file)
-        train_net(data, labels, net5, trained_net_file)
-        plot_loss(net5, outfile=join(root, 'plots', 'net5_loss.png'))
+        train_net(data, labels, net21, trained_net_file, weights_file=pretrained_net_file)
+        plot_loss(net21, outfile=join(root, 'plots', 'net21_loss.png'))
     else:
         print('loading net from disk...')
         with open(trained_net_file, 'rb') as ifile:
-            net5 = pickle.load(ifile)
+            net21 = pickle.load(ifile)
         print('loading test data...')
         data, _ = load2d(test_data_file)
         names = np.load(test_names_file)
         print('generating kaggle submission...')
 
-        generate_submission(data, names, net5, submission_file, header_file, N=25)
+        generate_submission(data, names, net21, submission_file, header_file, N=50)

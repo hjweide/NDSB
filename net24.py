@@ -1,13 +1,13 @@
 #!/home/hendrik/work/ndsb/bin/python
 
-# file net6.py
+# file net24.py
 
 from __future__ import absolute_import
 
 import cv2
 import sys
 import time
-import theano
+import theano   # NOQA
 import cPickle as pickle
 
 import numpy as np
@@ -78,7 +78,8 @@ class AdjustVariableOnStagnation(object):
 
     def __getstate__(self):
         d = dict(self.__dict__)
-        del d['update']
+        if 'update' in d:
+            del d['update']
         return d
 
     def __setstate__(self, d):
@@ -107,8 +108,8 @@ class EarlyStopping(object):
             raise StopIteration()
 
 
-max_offset = 6
-min_scale, max_scale = 0.7, 1.3
+max_offset = 2
+min_scale, max_scale = 1. / 1.3, 1.3
 
 
 class TransformationBatchIterator(BatchIterator):
@@ -139,7 +140,7 @@ class TransformationBatchIterator(BatchIterator):
         np.random.shuffle(indices)
 
         # generate random parameters for the transforms
-        radians = np.random.randint(360, size=bs) * (np.pi / 180)
+        radians = np.random.randint(12, size=bs) * 30 * (np.pi / 180)
         offsets = np.random.randint(2 * max_offset + 1, size=(2 * bs)).reshape(bs, 2) - max_offset
         scales = (max_scale - min_scale) * np.random.random(size=bs) + min_scale
 
@@ -151,59 +152,69 @@ class TransformationBatchIterator(BatchIterator):
         return Xbc, yb
 
 
-"""
-net6 is a convolutional neural network with simple data augmentation and dropout for regularization.  The learning rate and momentum are adjusted throughout.
-"""
-net6 = NeuralNet(
+net24 = NeuralNet(
     layers=[
         ('input', layers.InputLayer),
+
         ('conv1', Conv2DLayer),
         ('pool1', MaxPool2DLayer),
         ('dropout1', layers.DropoutLayer),
+
         ('conv2', Conv2DLayer),
         ('pool2', MaxPool2DLayer),
         ('dropout2', layers.DropoutLayer),
+
         ('conv3', Conv2DLayer),
-        # ('pool3', MaxPool2DLayer),
-        ('conv4', Conv2DLayer),
-        ('pool4', MaxPool2DLayer),
-        ('dropout4', layers.DropoutLayer),
+        ('pool3', MaxPool2DLayer),
+        ('maxout3', layers.FeaturePoolLayer),
+        ('dropout3', layers.DropoutLayer),
+
         ('hidden5', layers.DenseLayer),
+        ('maxout5', layers.FeaturePoolLayer),
         ('dropout5', layers.DropoutLayer),
+
         ('hidden6', layers.DenseLayer),
+        ('maxout6', layers.FeaturePoolLayer),
         ('dropout6', layers.DropoutLayer),
+
         ('output', layers.DenseLayer),
     ],
     input_shape=(None, 1, 48, 48),
-    conv1_num_filters=32, conv1_filter_size=(13, 13), conv1_strides=(1, 1),
+
+    conv1_num_filters=256, conv1_filter_size=(4, 4), conv1_strides=(1, 1),
     pool1_ds=(2, 2), pool1_strides=(2, 2),
     dropout1_p=0.1,
-    conv2_num_filters=64, conv2_filter_size=(3, 3), conv2_strides=(1, 1),
+
+    conv2_num_filters=384, conv2_filter_size=(3, 3), conv2_strides=(1, 1),
     pool2_ds=(2, 2), pool2_strides=(2, 2),
-    dropout2_p=0.1,
-    conv3_num_filters=128, conv3_filter_size=(3, 3), conv3_strides=(1, 1),
-    # pool3_ds=(2, 2), pool3_strides=(2, 2),
-    conv4_num_filters=256, conv4_filter_size=(3, 3), conv4_strides=(1, 1),
-    pool4_ds=(2, 2), pool4_strides=(2, 2),
-    dropout4_p=0.1,
-    hidden5_num_units=1024,
+    dropout2_p=0.2,
+
+    conv3_num_filters=512, conv3_filter_size=(3, 3), conv3_strides=(1, 1),
+    pool3_ds=(2, 2), pool3_strides=(2, 2),
+    maxout3_ds=2,
+    dropout3_p=0.3,
+
+    hidden5_num_units=8192,
+    maxout5_ds=2,
     dropout5_p=0.5,
-    hidden6_num_units=1024,
+
+    hidden6_num_units=8192,
+    maxout6_ds=2,
     dropout6_p=0.5,
-    output_num_units=121,
+
     output_nonlinearity=nonlinearities.softmax,
+    output_num_units=121,
 
-    update_learning_rate=theano.shared(float32(0.03)),
+    update_learning_rate=theano.shared(float32(0.05)),
     update_momentum=theano.shared(float32(0.9)),
-
     on_epoch_finished=[
-        AdjustVariableOnStagnation('update_learning_rate', patience=25, update=lambda x: 0.5 * x),
+        AdjustVariableOnStagnation('update_learning_rate', patience=10, update=lambda x: 0.5 * x),
         #AdjustVariableOnStagnation('update_momentum', patience=25, update=lambda x: (1 - x) * 0.9 + x),
         #AdjustVariable('update_learning_rate', start=0.03, stop=0.001),
         #AdjustVariable('update_momentum', start=0.9, stop=0.999),
         EarlyStopping(patience=50)
     ],
-    batch_iterator_train=TransformationBatchIterator(batch_size=256),
+    batch_iterator_train=TransformationBatchIterator(batch_size=128),
 
     max_epochs=500,
     verbose=1,
@@ -214,12 +225,6 @@ def load(data_file, labels_file=None):
     data = np.load(data_file)
 
     data = 1. - (data.astype(np.float32) / 255.)
-
-    #mean = np.mean(data, axis=0)
-    #data -= mean
-
-    #std = np.std(data, axis=0)
-    #data /= std
 
     if labels_file is not None:
         labels = np.load(labels_file)
@@ -285,7 +290,7 @@ def perturb(Xi, theta, offset, scale):
 
 
 def generate_random_parameters(bs):
-        radians = np.random.randint(360, size=bs) * (np.pi / 180)
+        radians = 30 * np.random.randint(12, size=bs) * (np.pi / 180)
         offsets = np.random.randint(2 * max_offset + 1, size=(2 * bs)).reshape(bs, 2) - max_offset
         scales = (max_scale - min_scale) * np.random.random(size=bs) + min_scale
         return radians, offsets, scales
@@ -326,12 +331,12 @@ if __name__ == '__main__':
     train_labels_file = join(root, 'train_labels_noaspect.npy')
     test_data_file = join(root, 'test_data_noaspect.npy')
     test_names_file = join(root, 'test_names_noaspect.npy')
-    trained_net_file = join(root, 'nets', 'net6.pickle')
-    submission_file = join(root, 'submissions', 'submit_valid_aug.csv')
+    trained_net_file = join(root, 'nets', 'net24.pickle')
+    submission_file = join(root, 'submissions', 'submit_net_13.csv')
 
     retrain, test = False, False
     if len(sys.argv) < 2:
-        print('usage:\n ./net6.py test\n ./net6.py retrain')
+        print('usage:\n ./net24.py test\n ./net24.py retrain')
     elif sys.argv[1].lower() == 'retrain':
         retrain = True
         print('retrain = %s' % (retrain))
@@ -349,15 +354,15 @@ if __name__ == '__main__':
     if retrain:
         print('retraining net...')
         data, labels = load2d(train_data_file, train_labels_file)
-        train_net(data, labels, net6, trained_net_file)
-        plot_loss(net6, outfile=join(root, 'plots', 'net6_loss.png'))
-    else:
+        train_net(data, labels, net24, trained_net_file)
+        plot_loss(net24, outfile=join(root, 'plots', 'net24_loss.png'))
+    elif test:
         print('loading net from disk...')
         with open(trained_net_file, 'rb') as ifile:
-            net6 = pickle.load(ifile)
+            net24 = pickle.load(ifile)
         print('loading test data...')
         data, _ = load2d(test_data_file)
         names = np.load(test_names_file)
         print('generating kaggle submission...')
 
-        generate_submission(data, names, net6, submission_file, header_file, N=25)
+        generate_submission(data, names, net24, submission_file, header_file, N=50)
