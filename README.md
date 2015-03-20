@@ -1,11 +1,13 @@
 # National Data Science Bowl (NDSB)
 
-This is my code for the National Data Science Bowl recently hosted by Kaggle.  My final solution scored 0.755580 on the public leaderboard and 0.759122 on the private leaderboard, giving me an overall finish of 103rd place out of 1049 contestants.
+This is my code for the National Data Science Bowl recently hosted by Kaggle.  My final solution scored 0.755580 on the public leaderboard and 0.759122 on the private leaderboard, giving me an overall finish of 103rd place out of 1049 contestants, just barely in the top 10% ;-)
 
-To achieve this score, I created an ensemble of my five best models.  These are included in the repository and are the networks numbered 10, 13, 19, 21, and 24.  A short description of each network is given at the end of the file.
+To achieve this score, I created an ensemble of my five best models.  These are included in the repository and are the networks numbered 10, 13, 19, 21, and 24.  A short description of each network is given at the end of the file.  All my networks were trained on a machine with four cores, 8GB RAM and an NVIDIA GeForce GTX 660 GPU.
+
+Be sure to visit the forum for this competition to read more about the winning solutions: https//www.kaggle.com/c/datasciencebowl/forums.  A very thorough blog post describing the winning solution may be found here: http://benanne.github.io/2015/03/17/plankton.html.
 
 ## Getting the Data
-To run this code, first get the training data from:
+To run this code, first get the training and test data from these links.  You will have to accept the competition's terms and conditions.
 https://www.kaggle.com/c/datasciencebowl/download/train.zip
 
 Then get the test data from:
