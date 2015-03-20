@@ -4,7 +4,7 @@ This is my code for the National Data Science Bowl recently hosted by Kaggle.  M
 
 To achieve this score, I created an ensemble of my five best models.  These are included in the repository and are the networks numbered 10, 13, 19, 21, and 24.  A short description of each network is given at the end of the file.  All my networks were trained on a machine with four cores, 8GB RAM and an NVIDIA GeForce GTX 660 GPU.
 
-Be sure to visit the forum for this competition to read more about the winning solutions: https//www.kaggle.com/c/datasciencebowl/forums.  A very thorough blog post describing the winning solution may be found here: http://benanne.github.io/2015/03/17/plankton.html.
+Be sure to visit the forum for this competition to read more about the winning solutions: https://www.kaggle.com/c/datasciencebowl/forums.  A very thorough blog post describing the winning solution may be found here: http://benanne.github.io/2015/03/17/plankton.html.
 
 ## Getting the Data
 To run this code, first get the training and test data from these links.  You will have to accept the competition's terms and conditions.
