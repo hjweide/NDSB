@@ -15,10 +15,10 @@ from sklearn.metrics import log_loss, accuracy_score  # NOQA
 from sklearn.cross_validation import StratifiedKFold  # NOQA
 
 from os.path import join, isfile
-from net5 import TransformationBatchIterator  # NOQA
-from net5 import AdjustVariable  # NOQA
-from net5 import AdjustVariableOnStagnation  # NOQA
-from net5 import EarlyStopping  # NOQA
+from net13 import TransformationBatchIterator  # NOQA
+from net13 import AdjustVariable  # NOQA
+from net13 import AdjustVariableOnStagnation  # NOQA
+from net13 import EarlyStopping  # NOQA
 
 
 big_params = {'max_offset': 6,
