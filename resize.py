@@ -82,8 +82,8 @@ def resize_image(infile, outfile, command, convert_to_png=False):
 
 if __name__ == '__main__':
     root = '/home/hendrik/work/ndsb/data'
-    # command = 'convert $name_in -resize 64x64 -gravity center -background white -extent 64x64 PNG24:$name_out'
-    command = 'convert $name_in -resize 48x48! $name_out'  # the ! tells imagemagick to ignore aspect ratio
+    command = 'convert $name_in -resize 95x95 -gravity center -background white -extent 95x95 $name_out'
+    # command = 'convert $name_in -resize 48x48! $name_out'  # the ! tells imagemagick to ignore aspect ratio
 
     if len(sys.argv) != 2:
         print('usage:\n ./resize.py train\n ./resize.py test')
@@ -92,9 +92,9 @@ if __name__ == '__main__':
     arg = sys.argv[1].lower()
     if arg == 'train':
         indir = join(root, 'train')
-        outdir = join(root, 'train-resized-noaspect')
-        allfile = join(root, 'kaggle-all-noaspect.txt')
-        headerfile = join(root, 'kaggle-header-noaspect.txt')
+        outdir = join(root, 'train-resized-95')
+        allfile = join(root, 'kaggle-all-95.txt')
+        headerfile = join(root, 'kaggle-header-95.txt')
 
         print('resizing the training set:')
         print(' the input directory is %s' % (indir))
@@ -103,7 +103,7 @@ if __name__ == '__main__':
         print(' the header file will be written to %s' % (headerfile))
         print(' the resizing command is %s' % (command))
 
-        resize_training(indir, outdir, command, allfile, headerfile, convert_to_png=True)
+        resize_training(indir, outdir, command, allfile, headerfile, convert_to_png=False)
     elif arg == 'test':
         indir = join(root, 'test')
         outdir = join(root, 'test-resized-noaspect')

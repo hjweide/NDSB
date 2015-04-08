@@ -89,6 +89,9 @@ def load2d(data_file, labels_file=None):
 
 def split_valid_train(data_file, labels_file, target='valid'):
     X, y = load2d(data_file, labels_file)
+    if target == 'neither':
+        return X, y
+
     kf = StratifiedKFold(y, round(1. / 0.2))
     if target == 'valid':
         _, indices = next(iter(kf))

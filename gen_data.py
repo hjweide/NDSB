@@ -5,35 +5,23 @@ import cv2
 import numpy as np
 
 from os import listdir
-from os.path import join
-
-from skimage.morphology import white_tophat, black_tophat, disk     # NOQA
+from os.path import join, dirname, basename
 
 
 coarse_labels = ["acantharia", "amphipods", "appendicularian", "artifacts", "chaetognath", "chordate", "copepod", "crustacean", "ctenophore", "decapods", "detritus", "diatom", "echinoderm", "echinopluteus", "ephyra", "euphausiids", "fecal_pellet", "fish_larvae", "heteropod", "hydromedusae", "invertebrate", "jellies_tentacles", "polychaete", "protist", "pteropod", "radiolarian", "shrimp", "siphonophore", "stomatopod", "tornaria_acorn_worm_larvae", "trichodesmium", "trochophore_larvae", "tunicate", "unknown"]
 
 
-def generate_training_data(allfile, datafile, labelsfile, fine=True):
+def generate_training_data(allfile, datafile, labelsfile):
     images, labels = [], []
     with open(allfile, 'r') as ifile:
         for line in ifile:
             fname, label = line.strip().split(' ')
             img = cv2.imread(fname, cv2.CV_LOAD_IMAGE_GRAYSCALE)
-            # old code to use multiple morphological channels
-            #temp = [img.flatten()]
-            #temp.append(white_tophat(img, disk(1)).flatten())
-            #temp.append(black_tophat(img, disk(1)).flatten())
-            #images.append(np.array(temp).flatten())
             images.append(img.flatten())
-            if fine:
-                labels.append(int(label))
-            else:
-                for i, label in enumerate(coarse_labels):
-                    if label in fname:
-                        labels.append(i)
-                        break
+            #labels.append(int(label))
+            class_name = basename(dirname(fname))
+            labels.append(class_name)
 
-    #images_array = np.array(images)
     images_array = np.vstack(images)
     labels_array = np.vstack(labels)
 
@@ -83,11 +71,10 @@ if __name__ == '__main__':
     if arg == 'train':
         print('generating training data')
         allfile = join(root, 'kaggle-all-noaspect.txt')
-        datafile = join(root, 'train_data_noaspect.npy')
-        labelsfile = join(root, 'train_labels_noaspect.npy')
+        datafile = join(root, 'train_data_text.npy')
+        labelsfile = join(root, 'train_labels_text.npy')
 
-        generate_training_data(allfile, datafile, labelsfile, fine=True)
-        #generate_training_data(allfile, datafile, labelsfile, fine=False)
+        generate_training_data(allfile, datafile, labelsfile)
     elif arg == 'test':
         print('generating test data')
         indir = join(root, 'test-resized-noaspect')

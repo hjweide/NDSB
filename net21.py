@@ -142,7 +142,7 @@ class TransformationBatchIterator(BatchIterator):
         # generate random parameters for the transforms
         radians = np.random.randint(360, size=bs) * (np.pi / 180)
         offsets = np.random.randint(2 * max_offset + 1, size=(2 * bs)).reshape(bs, 2) - max_offset
-        scales = (max_scale - min_scale) * np.random.random(size=bs) + min_scale
+        scales = np.e ** (np.log(max_scale) + (np.log(min_scale) - np.log(max_scale)) * np.random.random(size=bs))
 
         indices_transform = indices
         assert len(indices_transform) == len(radians) == len(offsets) == len(scales), 'lengths must match'
@@ -291,7 +291,7 @@ def perturb(Xi, theta, offset, scale):
         cos_theta = np.cos(theta)
         sin_theta = np.sin(theta)
 
-        r00, r01, r10, r11 = scale * cos_theta, sin_theta, -sin_theta, scale * cos_theta
+        r00, r01, r10, r11 = scale * cos_theta, scale * sin_theta, - scale * sin_theta, scale * cos_theta
 
         x0, y0 = np.array(Xi.shape) / 2 + offset
         tx = x0 - r00 * x0 - r01 * y0
